@@ -18,11 +18,6 @@ def serve_static(path):
 def home():
    return render_template('index.html')
 
-@app.route('/<path:path>')
-def all_routes(path):
-    return redirect('/')
-
-
 # Loading the model
 def load_llm(max_tokens, prompt_template):
     # Load the locally downloaded model here
@@ -53,6 +48,10 @@ def generate_article():
         return jsonify({"article": article})
     else:
         return jsonify({"error": "Article couldn't be generated."}), 500
+
+@app.route('/<path:path>')
+def all_routes(path):
+    return redirect('/')
 
 if __name__ == "__main__":
     app.run(port=port)
