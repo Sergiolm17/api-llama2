@@ -44,6 +44,7 @@ def load_llm(max_tokens, prompt_template):
 def generate_article():
     data = request.json
     user_input = data.get('user_input')
+    print(user_input)
     prompt_template = """You are a digital marketing and SEO expert and your task is to write an article so write an article on the given topic: {user_input}. The article must be under 800 words. The article should be be lengthy."""
     llm_call = load_llm(max_tokens=800, prompt_template=prompt_template)
     result = llm_call(user_input)
