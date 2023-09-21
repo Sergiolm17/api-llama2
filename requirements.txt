@@ -5,3 +5,6 @@ requests==2.31.0
 langchain >= 0.0.184
 openai >= 0.27.7
 streamlit >= 1.24.0
+chromadb >=  0.0.0
+InstructorEmbedding >= 0.0.0
+sentence_transformers >= 0.0.0

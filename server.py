@@ -3,6 +3,9 @@ from flask import Flask, send_from_directory, render_template, redirect, request
 from langchain.llms import CTransformers
 from langchain.chains import LLMChain
 from langchain import PromptTemplate
+from langchain.vectorstores import Chroma
+from langchain.embeddings import HuggingFaceInstructEmbeddings
+
 import io
 import requests
 
@@ -18,40 +21,48 @@ def serve_static(path):
 def home():
    return render_template('index.html')
 
+NOMBRE_INDICE_CHROMA = "/db2"
+
+
+
+embedding_instruct = HuggingFaceInstructEmbeddings(
+    model_name="all-mpnet-base-v2",
+    model_kwargs={"device":"cpu"}
+)
+
+vectorstore_chroma = Chroma(
+    persist_directory=NOMBRE_INDICE_CHROMA,
+    embedding_function=embedding_instruct
+)
+
 # Loading the model
 def load_llm(max_tokens, prompt_template):
     # Load the locally downloaded model here
-    llm = CTransformers(
-        model="llama-2-7b-chat.ggmlv3.q8_0.bin",
-        model_type="llama",
-        max_new_tokens=max_tokens,
-        temperature=0.7
-    )
+    docs_q = vectorstore_chroma.similarity_search_with_score(query, k=3)
 
-    llm_chain = LLMChain(
-        llm=llm,
-        prompt=PromptTemplate.from_template(prompt_template)
-    )
     return llm_chain
 
 # API route to generate article
-@app.route('/generate_article', methods=['POST'])
-def generate_article():
-    data = request.json
-    user_input = data.get('user_input')
-    print(user_input)
-    prompt_template = """You are a digital marketing and SEO expert and your task is to write an article so write an article on the given topic: {user_input}. The article must be under 800 words. The article should be be lengthy."""
-    llm_call = load_llm(max_tokens=800, prompt_template=prompt_template)
-    result = llm_call(user_input)
-    if len(result) > 0:
-        article = result['text']
-        return jsonify({"article": article})
-    else:
-        return jsonify({"error": "Article couldn't be generated."}), 500
+@app.route('/search', methods=['POST'])
+def search():
+    if request.method == 'POST':
+        # Obtener la consulta del formulario HTML
+        query = request.form.get('query')
 
-@app.route('/<path:path>')
-def all_routes(path):
-    return redirect('/')
+        # Realizar la búsqueda de similitud de texto en el índice Chroma
+        docs_q = vectorstore_chroma.similarity_search_with_score(query, k=1)
+
+        # Puedes procesar los resultados y enviarlos de vuelta al cliente como JSON, por ejemplo:
+        result = {
+            'query': query,
+            'most_similar_doc': docs_q[0] if docs_q else None  # El documento más similar (si hay resultados)
+        }
+
+        return jsonify(result)
+
+    # Manejar otras condiciones si es necesario
+
+# ...
 
 if __name__ == "__main__":
     app.run(port=port)
